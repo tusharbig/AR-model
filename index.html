@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AR Model Uploader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f0f4ff, #ffffff);
+      color: #1a1a1a;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+      z-index: 10;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"%3E%3Ccircle cx="100" cy="100" r="80" fill="none" stroke="%23ffffff33" stroke-width="20" opacity="0.3"/%3E%3C/svg%3E');
+      opacity: 0.2;
+      animation: pulse 8s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    header h1 {
+      font-size: clamp(1.8rem, 5vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+      animation: fadeInDown 1.2s ease;
+    }
+
+    header p {
+      font-size: clamp(0.9rem, 3vw, 1.1rem);
+      opacity: 0.9;
+      animation: fadeInUp 1.2s ease 0.2s forwards;
+      opacity: 0;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    nav li {
+      margin: 0.5rem 1rem;
+    }
+
+    nav a {
+      color: #fff;
+      text-decoration: none;
+      font-size: clamp(0.9rem, 2.5vw, 1rem);
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      transition: all 0.3s ease;
+      display: inline-block;
+    }
+
+    nav a:hover, nav a:focus {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 1rem auto;
+      padding: clamp(1rem, 3vw, 1.5rem);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      flex: 1;
+    }
+
+    model-viewer {
+      width: 100%;
+      height: clamp(300px, 50vw, 400px);
+      border-radius: 12px;
+      border: 2px solid #e5e7eb;
+      margin: 1rem 0;
+      background: #f8fafc;
+      transition: transform 0.3s ease;
+    }
+
+    model-viewer:hover {
+      transform: scale(1.02);
+    }
+
+    input[type="file"] {
+      margin: 1rem 0;
+      padding: 0.5rem;
+      font-size: clamp(0.9rem, 2.5vw, 1rem);
+      border: 2px solid #2563eb;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #fff;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #fff;
+      padding: 0.75rem 1.5rem;
+      font-size: clamp(0.9rem, 2.5vw, 1rem);
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin: 0.5rem;
+      touch-action: manipulation;
+      min-height: 48px;
+    }
+
+    button:hover, button:focus {
+      background: linear-gradient(135deg, #4f46e5, #2563eb);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    canvas {
+      margin: 1rem auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 100%;
+    }
+
+    footer {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #fff;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      margin-top: auto;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    footer p {
+      margin: 0.5rem 0;
+      font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+    }
+
+    footer .social-links a {
+      color: #fff;
+      margin: 0 0.5rem;
+      font-size: clamp(1rem, 3vw, 1.2rem);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    footer .social-links a:hover, footer .social-links a:focus {
+      color: #dbeafe;
+    }
+
+    @keyframes fadeInDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 0.75rem; }
+      nav ul { flex-direction: column; }
+      nav li { margin: 0.3rem 0; }
+      .container { margin: 0.5rem; }
+      input[type="file"] { font-size: 0.85rem; }
+      button { padding: 0.6rem 1.2rem; }
+    }
+
+    @media (max-width: 400px) {
+      header h1 { font-size: 1.6rem; }
+      header p { font-size: 0.85rem; }
+      model-viewer { height: 250px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>AR Model Uploader</h1>
+      <p>Upload your 3D model and generate an AR-ready QR code</p>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="ar.html">Camera</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    <input type="file" id="modelUpload" accept=".glb,.gltf" />
+    <model-viewer id="viewer" camera-controls auto-rotate loading="eager" reveal="auto"></model-viewer>
+    <button onclick="generateQR()">Generate QR Code</button>
+    <canvas id="qrCanvas"></canvas>
+    <button id="downloadBtn" onclick="downloadQR()" style="display:none;">Download QR Code</button>
+  </div>
+
+  <footer>
+    <p>Made with ❤️ using <b>model-viewer</b> and <b>WebXR</b></p>
+    <p>© 2025 AR Web Studio</p>
+    <div class="social-links">
+      <a href="#" aria-label="Twitter">𝕏</a>
+      <a href="#" aria-label="GitHub">GitHub</a>
+      <a href="#" aria-label="LinkedIn">LinkedIn</a>
+    </div>
+  </footer>
+
+  <script>
+    const viewer = document.getElementById('viewer');
+    const qrCanvas = document.getElementById('qrCanvas');
+    const downloadBtn = document.getElementById('downloadBtn');
+    let filename = "";
+
+    document.getElementById('modelUpload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      filename = encodeURIComponent(file.name);
+      const url = URL.createObjectURL(file);
+      viewer.src = url;
+      console.log("Uploaded model:", filename);
+    });
+
+    function generateQR() {
+      if (!filename) {
+        alert("Please upload a 3D model first.");
+        return;
+      }
+      const hostedURL = `https://yourdomain.com/ar.html?model=${filename}`;
+      console.log("Generating QR for URL:", hostedURL);
+      QRCode.toCanvas(qrCanvas, hostedURL, { width: Math.min(200, window.innerWidth - 40) }, function (err) {
+        if (err) {
+          console.error("QR code generation failed:", err);
+          alert("Failed to generate QR code. Please try again.");
+        } else {
+          downloadBtn.style.display = 'inline-block';
+        }
+      });
+    }
+
+    function downloadQR() {
+      const link = document.createElement('a');
+      link.download = 'ar-qrcode.png';
+      link.href = qrCanvas.toDataURL();
+      link.click();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scan & View AR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f0f4ff, #ffffff);
+      color: #1a1a1a;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+      z-index: 10;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"%3E%3Ccircle cx="100" cy="100" r="80" fill="none" stroke="%23ffffff33" stroke-width="20" opacity="0.3"/%3E%3C/svg%3E');
+      opacity: 0.2;
+      animation: pulse 8s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    header h1 {
+      font-size: clamp(1.8rem, 5vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+      animation: fadeInDown 1.2s ease;
+    }
+
+    header p {
+      font-size: clamp(0.9rem, 3vw, 1.1rem);
+      opacity: 0.9;
+      animation: fadeInUp 1.2s ease 0.2s forwards;
+      opacity: 0;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    nav li {
+      margin: 0.5rem 1rem;
+    }
+
+    nav a {
+      color: #fff;
+      text-decoration: none;
+      font-size: clamp(0.9rem, 2.5vw, 1rem);
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      transition: all 0.3s ease;
+      display: inline-block;
+    }
+
+    nav a:hover, nav a:focus {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 1rem auto;
+      padding: clamp(1rem, 3vw, 1.5rem);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      flex: 1;
+    }
+
+    #reader {
+      width: 100%;
+      max-width: clamp(250px, 90vw, 400px);
+      margin: 1rem auto;
+      border-radius: 12px;
+      overflow: hidden;
+      display: none;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+      position: relative;
+    }
+
+    .scanner-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      border: 1px dashed #2563eb;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.05);
+      animation: scanPulse 2s infinite;
+    }
+
+    @keyframes scanPulse {
+      0% { border-color: #2563eb; }
+      50% { border-color: #4f46e5; }
+      100% { border-color: #2563eb; }
+    }
+
+    button {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #fff;
+      padding: 0.75rem 1.5rem;
+      font-size: clamp(0.9rem, 2.5vw, 1rem);
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin: 0.5rem;
+      touch-action: manipulation;
+      min-height: 48px;
+    }
+
+    button:hover, button:focus {
+      background: linear-gradient(135deg, #4f46e5, #2563eb);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    button.cancel {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+    }
+
+    button.cancel:hover, button.cancel:focus {
+      background: linear-gradient(135deg, #b91c1c, #ef4444);
+    }
+
+    model-viewer {
+      width: 100%;
+      height: clamp(300px, 50vw, 400px);
+      margin: 1rem 0;
+      border-radius: 12px;
+      border: 2px solid #e5e7eb;
+      background: #f8fafc;
+      display: none;
+      transition: transform 0.3s ease;
+    }
+
+    model-viewer:hover {
+      transform: scale(1.02);
+    }
+
+    .loading {
+      display: none;
+      font-size: clamp(0.9rem, 2.5vw, 1rem);
+      color: #2563eb;
+      margin: 1rem 0;
+      animation: fadeIn 0.5s ease;
+    }
+
+    footer {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: #fff;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      margin-top: auto;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    footer p {
+      margin: 0.5rem 0;
+      font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+    }
+
+    footer .social-links a {
+      color: #fff;
+      margin: 0 0.5rem;
+      font-size: clamp(1rem, 3vw, 1.2rem);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    footer .social-links a:hover, footer .social-links a:focus {
+      color: #dbeafe;
+    }
+
+    @keyframes fadeInDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 0.75rem; }
+      nav ul { flex-direction: column; }
+      nav li { margin: 0.3rem 0; }
+      .container { margin: 0.5rem; }
+      button { padding: 0.6rem 1.2rem; }
+    }
+
+    @media (max-width: 400px) {
+      header h1 { font-size: 1.6rem; }
+      header p { font-size: 0.85rem; }
+      #reader { max-width: 90vw; }
+      model-viewer { height: 250px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>Scan & View AR</h1>
+      <p>Scan a QR code to experience 3D models in augmented reality</p>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="ar.html">Camera</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    <button onclick="startScanner()" aria-label="Start QR code scanner">Start Camera</button>
+    <button class="cancel" onclick="stopScanner()" style="display:none;" aria-label="Cancel scanning">Cancel</button>
+    <button id="arBtn" onclick="enterAR()" style="display:none;" aria-label="View in AR">View in AR</button>
+    <div id="reader"><div class="scanner-overlay"></div></div>
+    <p id="loading" class="loading">Loading model...</p>
+    <model-viewer id="arViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls auto-rotate loading="eager" reveal="auto"></model-viewer>
+  </div>
+
+  <footer>
+    <p>Powered by <b>html5-qrcode</b> + <b>model-viewer</b></p>
+    <p>© 2025 AR Web Studio</p>
+    <div class="social-links">
+      <a href="#" aria-label="Twitter">𝕏</a>
+      <a href="#" aria-label="GitHub">GitHub</a>
+      <a href="#" aria-label="LinkedIn">LinkedIn</a>
+    </div>
+  </footer>
+
+  <script>
+    const reader = document.getElementById("reader");
+    const modelViewer = document.getElementById("arViewer");
+    const startBtn = document.querySelector("button[onclick='startScanner()']");
+    const cancelBtn = document.querySelector("button.cancel");
+    const arBtn = document.getElementById("arBtn");
+    const loading = document.getElementById("loading");
+    let scanner = null;
+
+    async function validateModelURL(url) {
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    }
+
+    function startScanner() {
+      reader.style.display = "block";
+      startBtn.style.display = "none";
+      cancelBtn.style.display = "inline-block";
+      arBtn.style.display = "none";
+      loading.style.display = "none";
+      modelViewer.style.display = "none";
+
+      scanner = new Html5Qrcode("reader");
+      scanner.start(
+        { facingMode: "environment" },
+        { fps: 20, qrbox: { width: Math.min(250, window.innerWidth - 40), height: Math.min(250, window.innerWidth - 40) } },
+        async (decodedText) => {
+          console.log("Scanned QR code:", decodedText);
+          try {
+            const url = new URL(decodedText);
+            if (!url.searchParams.has("model")) {
+              alert("Invalid QR code. It must contain a model parameter.");
+              return;
+            }
+
+            const modelName = decodeURIComponent(url.searchParams.get("model"));
+            const modelURL = `https://yourdomain.com/models/${modelName}`;
+            console.log("Attempting to load model:", modelURL);
+
+            // Validate model URL
+            const isValid = await validateModelURL(modelURL);
+            if (!isValid) {
+              alert("Model not found at the specified URL. Please ensure it’s hosted correctly.");
+              return;
+            }
+
+            loading.style.display = "block";
+
+            // Set model source
+            modelViewer.src = modelURL;
+
+            // Handle model load
+            modelViewer.addEventListener('load', () => {
+              console.log("Model loaded successfully");
+              scanner.stop();
+              scanner = null;
+              reader.style.display = "none";
+              cancelBtn.style.display = "none";
+              loading.style.display = "none";
+              modelViewer.style.display = "block";
+              arBtn.style.display = "inline-block";
+
+              // Check AR availability and auto-trigger if supported
+              modelViewer.addEventListener('ar-status', (event) => {
+                console.log("AR status:", event.detail.status);
+                if (event.detail.status === 'session-started') {
+                  arBtn.style.display = "none";
+                } else if (modelViewer.canActivateAR) {
+                  modelViewer.activateAR();
+                }
+              }, { once: true });
+            }, { once: true });
+
+            // Handle model errors
+            modelViewer.addEventListener('error', (e) => {
+              console.error("Model loading error:", e);
+              alert("Failed to load the 3D model. It may be invalid or inaccessible.");
+              stopScanner();
+            }, { once: true });
+
+            // Timeout to prevent infinite loading
+            setTimeout(() => {
+              if (loading.style.display === "block") {
+                alert("Model loading timed out. Please try again.");
+                stopScanner();
+              }
+            }, 10000);
+          } catch (e) {
+            console.error("QR processing error:", e);
+            alert("Error reading QR code. Please try again.");
+          }
+        },
+        (err) => {
+          console.warn("QR scan error:", err);
+        }
+      ).catch((err) => {
+        console.error("Camera error:", err);
+        alert("Camera access denied. Please allow camera permissions and try again.");
+        stopScanner();
+      });
+    }
+
+    function stopScanner() {
+      if (scanner) {
+        scanner.stop().then(() => {
+          scanner = null;
+          reader.style.display = "none";
+          startBtn.style.display = "inline-block";
+          cancelBtn.style.display = "none";
+          arBtn.style.display = "none";
+          loading.style.display = "none";
+          modelViewer.style.display = "none";
+        }).catch((err) => {
+          console.error("Error stopping scanner:", err);
+        });
+      } else {
+        reader.style.display = "none";
+        startBtn.style.display = "inline-block";
+        cancelBtn.style.display = "none";
+        arBtn.style.display = "none";
+        loading.style.display = "none";
+        modelViewer.style.display = "none";
+      }
+    }
+
+    function enterAR() {
+      if (modelViewer.canActivateAR) {
+        modelViewer.activateAR();
+      } else {
+        alert("AR is not supported on this device or browser.");
+      }
+    }
+  </script>
+</body>
+</html>
